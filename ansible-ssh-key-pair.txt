@@ -41,6 +41,9 @@ ansible yourhost.domain.com -i inventoryfile.yml -b --become-method=sudo -m shel
 #RUN A PLAYBOOK
 ansible-playbook your-funky-playbook.yml -i inventoryfile.yml
 
+#IM TOO STUPID FOR ANSIBLE AND WANT TO RUN A SCRIPT
+ssh remote.host.com 'bash -s' < scriptkiddingme.sh"
+
 ###########
 sshd - settings
 ######
