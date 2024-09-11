@@ -1,0 +1,52 @@
+adduser ansi
+usermod -aG wheel ansi
+passwd ansi
+
+su ansi
+echo "$(whoami) ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/$(whoami)
+sudo -l
+
+ssh-keygen -t ed25519
+ssh-copy-id ser.dom.de
+
+~/.ssh/authorized_keys
+
+visudo
+ansible ALL=(ALL) NOPASSWD: ALL       'in der letzten Zeile
+
+
+#########
+
+ansible
+
+#########
+
+yum -y install ansible
+ansible --version
+
+### Host Inventory ###
+
+#EDIT GROUPS AND HOSTS
+sudo nano /etc/ansible/hosts
+
+#TEST GROUPS
+ansible -m ping group-name
+
+#EXECUTE COMMAND WITHOUT PLAYBOOK TO A GROUP OR HOST
+ansible -b --become-method=sudo -m shell -a 'command to execute' webservers
+
+#EXECUTE COMMAND WITH A INVETORY FILE
+ansible yourhost.domain.com -i inventoryfile.yml -b --become-method=sudo -m shell -a 'date
+
+#RUN A PLAYBOOK
+ansible-playbook your-funky-playbook.yml -i inventoryfile.yml
+
+###########
+sshd - settings
+######
+
+PermitRootLogin prohibit-password
+StrictModes yes
+PubkeyAuthentication yes
+ChallengeResponseAuthentication yes
+UsePAM no
