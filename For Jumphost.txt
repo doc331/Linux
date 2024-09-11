@@ -1,0 +1,106 @@
+#!/bin/bash
+
+### linux-os-config ###
+
+NORMAL='\033[0;39m'
+BLUE='\033[1;34m'
+GREEN='\033[1;32m'
+RED='\033[1;31m'
+
+echo -e "$NORMAL-------------------------------------------"
+echo -e "$RED  LINUX - OS - CONFIG  "
+echo -e "$RED  FOR DEBIAN 12 LXC : FOR DEBIAN 12 LXC       "
+echo -e "$NORMAL-------------------------------------------"
+
+
+
+ipaddress=$(hostname -I)
+domain='mydomain.com'
+
+echo "PRESS space TO CONTINUE OR ABORT WITH strg + c "
+read -r -s -d ' '
+
+sleep 3
+
+echo $ipaddress $HOSTNAME.$domain $HOSTNAME >> /etc/hosts
+
+sleep 3
+
+
+apt update && apt upgrade -y && apt install -y \
+net-tools sudo rsyslog qemu-guest-agent apt-transport-https ca-certificates curl gnupg libpam-pwquality ansible-core libpam-google-authenticator
+
+sudo timedatectl set-timezone Europe/Berlin
+
+sudo cp /etc/pam.d/common-password /etc/pam.d/common-password.bak
+
+echo '
+password        requisite                       pam_pwquality.so retry=3
+password        [success=1 default=ignore]      pam_unix.so obscure use_authtok try_first_pass yescrypt remember=5 minlen=16
+
+password        requisite                       pam_deny.so
+password        required                        pam_permit.so
+
+password        requisite                       pam_pwquality.so retry=3 ucredit=-1
+password        requisite                       pam_pwquality.so retry=3 dcredit=-1
+password        requisite                       pam_pwquality.so retry=3 ocredit=-1
+password        requisite                       pam_pwquality.so retry=3 minclass=3
+
+
+' >> /etc/pam.d/common-password
+
+
+#echo "server 10.0.20.1" >> /etc/chrony/chrony.conf
+#service firewalld stop
+#systemctl disable firewalld
+
+systemctl enable --now ssh
+
+sudo apt remove postfix -y && apt purge postfix -y
+
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+# Add the repository to Apt sources:
+echo \
+  "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
+  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+
+sudo apt update -y
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+
+
+echo '
+HostKey /etc/ssh/ssh_host_ed25519_key
+KbdInteractiveAuthentication yes
+UsePAM yes
+ChallengeResponseAuthentication yes
+AuthenticationMethods publickey,keyboard-interactive
+X11Forwarding yes
+PrintMotd no
+AcceptEnv LANG LC_*
+Subsystem       sftp    /usr/lib/openssh/sftp-server' > /etc/ssh/sshd_config
+
+echo 'auth   required   pam_google_authenticator.so' >> /etc/pam.d/sshd
+sed -i "s/@include common-auth/#@include common-auth/g" /etc/pam.d/sshd
+
+sudo systemctl restart ssh
+
+echo -e "$RED- --> ---> ---> ---> ---> ---> ---> ---> ---> ---> ---> ---> ---> ---> ---> "
+echo -e "$NORMAL"
+
+cat <<EOF
+adduser remoteuser
+usermod -aG sudo remoteuser
+echo "\$(whoami) ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/\$(whoami)
+mkdir ~/.ssh
+chmod 0755 ~/.ssh
+echo 'ssh-ed25519 AAAAC3NzaC1lZFI1NTE5AAAAIMw7/Dg3ZgKiybVbqjsU2xvdCbf98Q0+XtnhsFR/IZhw' > ~/.ssh/authorized_keys
+chmod 0755 ~/.ssh/authorized_keys
+
+google-authenticator
+
+EOF
